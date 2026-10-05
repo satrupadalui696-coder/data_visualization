@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Pipeline Data Volume Treemap</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  rect { stroke: #fff; stroke-width: 2px; cursor: pointer; }
+  text { fill: #fff; font-size: 12px; pointer-events: none; }
+  #tip { position: absolute; background: #222; color: #fff; padding: 6px 10px;
+         border-radius: 4px; font-size: 12px; display: none; }
+</style>
+</head>
+<body>
+<h2>Pipeline Data Volume (MB)</h2>
+<div id="tip"></div>
+<svg id="chart" width="900" height="500"></svg>
+
+<script>
+// Replace the values with the numbers from your lab dataset if different
+const data = {
+  name: "Pipeline",
+  children: [
+    { name: "Input Sources", children: [
+      { name: "Web Logs", value: 450 },
+      { name: "Mobile App", value: 320 },
+      { name: "CRM Export", value: 230 }
+    ]},
+    { name: "Processing Stages", children: [
+      { name: "Data Cleaning", value: 900 },
+      { name: "EDA", value: 700 },
+      { name: "Feature Engineering", value: 600 },
+      { name: "Model Training", value: 500 },
+      { name: "Evaluation", value: 300 },
+      { name: "Visualization", value: 200 },
+      { name: "Deployment", value: 150 }
+    ]}
+  ]
+};
+
+const width = 900, height = 500;
+const svg = d3.select("#chart");
+const tip = d3.select("#tip");
+const color = d3.scaleOrdinal().domain(["Input Sources", "Processing Stages"])
+                .range(["#1f77b4", "#ff7f0e"]);
+
+const root = d3.hierarchy(data).sum(d => d.value).sort((a, b) => b.value - a.value);
+d3.treemap().size([width, height]).paddingInner(3).paddingOuter(3).paddingTop(20)(root);
+
+// group labels
+svg.selectAll(".group").data(root.children).join("text")
+  .attr("x", d => d.x0 + 5).attr("y", d => d.y0 + 15)
+  .style("fill", "#333").style("font-weight", "bold").text(d => d.data.name);
+
+const leaf = svg.selectAll("g.leaf").data(root.leaves()).join("g").attr("class", "leaf")
+  .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+leaf.append("rect")
+  .attr("width", d => d.x1 - d.x0).attr("height", d => d.y1 - d.y0)
+  .attr("fill", d => color(d.parent.data.name))
+  .on("mouseover", function (e, d) {
+    d3.select(this).transition().duration(200).attr("opacity", 0.7);
+    tip.style("display", "block").html(`<b>${d.data.name}</b><br>${d.value} MB`);
+  })
+  .on("mousemove", e => tip.style("left", (e.pageX + 12) + "px").style("top", (e.pageY + 12) + "px"))
+  .on("mouseout", function () {
+    d3.select(this).transition().duration(200).attr("opacity", 1);
+    tip.style("display", "none");
+  });
+
+leaf.append("text").attr("x", 5).attr("y", 16).text(d => d.data.name);
+leaf.append("text").attr("x", 5).attr("y", 32).text(d => d.value + " MB");
+</script>
+</body>
+</html>
